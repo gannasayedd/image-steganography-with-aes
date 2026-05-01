@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AES Steganography Lab</title>
+  <style>
+    :root {
+      --ink: #11212d;
+      --paper: #f7f1e3;
+      --panel: rgba(255, 250, 242, 0.84);
+      --line: rgba(17, 33, 45, 0.12);
+      --accent: #d26a3d;
+      --accent-deep: #8a3b12;
+      --secondary: #31525b;
+      --success: #1c6b4a;
+      --shadow: 0 24px 60px rgba(17, 33, 45, 0.16);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(210, 106, 61, 0.22), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(49, 82, 91, 0.22), transparent 30%),
+        linear-gradient(135deg, #efe7d2 0%, #f9f5ec 42%, #dce7e4 100%);
+      padding: 32px 20px 56px;
+    }
+
+    .shell {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    .hero-card,
+    .panel {
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 30px;
+    }
+
+    .eyebrow {
+      font-size: 0.85rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent-deep);
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 4vw, 4rem);
+      line-height: 0.95;
+      margin: 0 0 14px;
+    }
+
+    .lead {
+      font-size: 1.05rem;
+      line-height: 1.7;
+      max-width: 54ch;
+      margin: 0;
+    }
+
+    .hero-side {
+      padding: 26px;
+      display: grid;
+      gap: 12px;
+      align-content: center;
+    }
+
+    .chip {
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(17, 33, 45, 0.06);
+      border: 1px solid rgba(17, 33, 45, 0.08);
+      font-size: 0.96rem;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
+    }
+
+    .panel {
+      padding: 24px;
+    }
+
+    h2 {
+      margin: 0 0 6px;
+      font-size: 1.6rem;
+    }
+
+    .sub {
+      margin: 0 0 18px;
+      color: rgba(17, 33, 45, 0.78);
+      line-height: 1.6;
+    }
+
+    form {
+      display: grid;
+      gap: 14px;
+    }
+
+    label {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    input,
+    textarea,
+    button {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid rgba(17, 33, 45, 0.14);
+      padding: 14px 16px;
+      font: inherit;
+    }
+
+    input,
+    textarea {
+      background: rgba(255, 255, 255, 0.88);
+    }
+
+    textarea {
+      min-height: 144px;
+      resize: vertical;
+    }
+
+    button {
+      background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      box-shadow: 0 14px 30px rgba(138, 59, 18, 0.26);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    .result {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(49, 82, 91, 0.08);
+      border: 1px solid rgba(49, 82, 91, 0.14);
+      display: none;
+      animation: fadeUp 260ms ease;
+    }
+
+    .result.show {
+      display: block;
+    }
+
+    .result.error {
+      background: rgba(210, 106, 61, 0.12);
+      border-color: rgba(210, 106, 61, 0.28);
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .metric {
+      background: rgba(255, 255, 255, 0.72);
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid rgba(17, 33, 45, 0.1);
+    }
+
+    .metric-name {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--secondary);
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .download {
+      display: inline-flex;
+      margin-top: 16px;
+      text-decoration: none;
+      color: white;
+      background: var(--success);
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-weight: 700;
+    }
+
+    .footer-note {
+      margin-top: 24px;
+      font-size: 0.92rem;
+      color: rgba(17, 33, 45, 0.8);
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 920px) {
+      .hero,
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .metrics {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="hero-card">
+        <div class="eyebrow">Cybersecurity Project</div>
+        <h1>AES + LSB Steganography</h1>
+        <p class="lead">
+          This local web interface wraps your Python steganography engine. It encrypts the message with AES,
+          hides it inside a PNG using LSB embedding, and reports MSE, PSNR, and processing time.
+        </p>
+      </div>
+      <aside class="hero-side hero-card">
+        <div class="chip">Upload only <strong>PNG</strong> images for safe hidden-data storage.</div>
+        <div class="chip">Use the same key for encryption and decryption.</div>
+        <div class="chip">Download the generated stego image after encoding.</div>
+      </aside>
+    </section>
+
+    <section class="workspace">
+      <article class="panel">
+        <h2>Encode Message</h2>
+        <p class="sub">Hide an AES-encrypted secret inside a PNG cover image.</p>
+        <form id="encode-form">
+          <div>
+            <label for="encode-image">PNG Cover Image</label>
+            <input id="encode-image" name="image" type="file" accept=".png,image/png" required>
+          </div>
+          <div>
+            <label for="encode-message">Secret Message</label>
+            <textarea id="encode-message" name="message" placeholder="Write the secret message here..." required></textarea>
+          </div>
+          <div>
+            <label for="encode-key">Encryption Key</label>
+            <input id="encode-key" name="key" type="password" placeholder="Enter a shared secret key" required>
+          </div>
+          <button type="submit">Encrypt and Hide</button>
+        </form>
+        <div id="encode-result" class="result"></div>
+      </article>
+
+      <article class="panel">
+        <h2>Decode Message</h2>
+        <p class="sub">Extract the hidden payload and decrypt it with the correct key.</p>
+        <form id="decode-form">
+          <div>
+            <label for="decode-image">PNG Stego Image</label>
+            <input id="decode-image" name="image" type="file" accept=".png,image/png" required>
+          </div>
+          <div>
+            <label for="decode-key">Decryption Key</label>
+            <input id="decode-key" name="key" type="password" placeholder="Enter the original key" required>
+          </div>
+          <button type="submit">Extract and Decrypt</button>
+        </form>
+        <div id="decode-result" class="result"></div>
+      </article>
+    </section>
+
+    <p class="footer-note">
+      Run the server with <code>.\.venv\Scripts\python.exe web_app.py</code>, then open
+      <code>http://127.0.0.1:8000</code> in your browser.
+    </p>
+  </div>
+
+  <script>
+    async function sendForm(form, endpoint, resultBox, renderResult) {
+      resultBox.className = "result";
+      resultBox.textContent = "Working...";
+      resultBox.classList.add("show");
+
+      const formData = new FormData(form);
+
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+        if (!response.ok || data.error) {
+          throw new Error(data.error || "Request failed.");
+        }
+
+        renderResult(data);
+      } catch (error) {
+        resultBox.className = "result error show";
+        resultBox.textContent = error.message;
+      }
+    }
+
+    document.getElementById("encode-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const resultBox = document.getElementById("encode-result");
+
+      await sendForm(event.currentTarget, "/encode", resultBox, (data) => {
+        const psnrValue = data.metrics.psnr === "Infinity" ? "Infinity dB" : `${data.metrics.psnr} dB`;
+        const downloadHref = `data:image/png;base64,${data.image_base64}`;
+
+        resultBox.className = "result show";
+        resultBox.innerHTML = `
+          <strong>${data.message}</strong>
+          <div class="metrics">
+            <div class="metric">
+              <div class="metric-name">MSE</div>
+              <div class="metric-value">${data.metrics.mse}</div>
+            </div>
+            <div class="metric">
+              <div class="metric-name">PSNR</div>
+              <div class="metric-value">${psnrValue}</div>
+            </div>
+            <div class="metric">
+              <div class="metric-name">Time</div>
+              <div class="metric-value">${data.metrics.processing_time}s</div>
+            </div>
+          </div>
+          <a class="download" href="${downloadHref}" download="${data.download_name}">Download Stego PNG</a>
+        `;
+      });
+    });
+
+    document.getElementById("decode-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const resultBox = document.getElementById("decode-result");
+
+      await sendForm(event.currentTarget, "/decode", resultBox, (data) => {
+        resultBox.className = "result show";
+        resultBox.innerHTML = `
+          <strong>Decoded Message</strong>
+          <p>${data.message}</p>
+          <div class="metrics">
+            <div class="metric">
+              <div class="metric-name">Time</div>
+              <div class="metric-value">${data.processing_time}s</div>
+            </div>
+          </div>
+        `;
+      });
+    });
+  </script>
+</body>
+</html>
