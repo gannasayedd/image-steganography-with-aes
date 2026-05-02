@@ -3,15 +3,17 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import time
+from pathlib import Path
 
 import test
 
 
 PAGES = ["Home", "Encode", "Decode", "Activity Logs", "Metrics Dashboard"]
+LOGO_PATH = Path("stegoshield.png")
 
 
 st.set_page_config(
-    page_title="StegoShield ",
+    page_title="StegoShield🛡️",
     layout="wide",
 )
 
@@ -74,26 +76,35 @@ def render_styles():
         """
         <style>
           :root {
-            --ink: #3b1458;
-            --muted: #7a4ea0;
-            --pink: #ff66c4;
-            --light-pink: #ffe7f7;
-            --purple: #9b6bff;
-            --light-purple: #efe4ff;
+            --ink: #143254;
+            --muted: #4a6d95;
+            --baby-blue: #e8f4ff;
+            --sky-blue: #cdeeff;
+            --navy-blue: #163d6b;
             --panel: rgba(255, 255, 255, 0.74);
-            --line: rgba(155, 107, 255, 0.18);
-            --shadow: 0 24px 70px rgba(151, 90, 229, 0.16);
+            --line: rgba(55, 108, 176, 0.18);
+            --shadow: 0 24px 70px rgba(37, 86, 148, 0.15);
           }
 
           .stApp {
             background:
-              radial-gradient(circle at top left, rgba(255, 102, 196, 0.24), transparent 27%),
-              radial-gradient(circle at top right, rgba(155, 107, 255, 0.22), transparent 30%),
-              linear-gradient(135deg, var(--light-pink) 0%, #fff8fe 42%, var(--light-purple) 100%);
+              radial-gradient(circle at top left, rgba(117, 199, 255, 0.30), transparent 27%),
+              radial-gradient(circle at top right, rgba(22, 61, 107, 0.20), transparent 30%),
+              linear-gradient(135deg, var(--baby-blue) 0%, #f8fcff 38%, var(--sky-blue) 70%);
+          }
+
+          header[data-testid="stHeader"],
+          div[data-testid="stToolbar"] {
+            display: none;
+          }
+
+          #MainMenu,
+          footer {
+            visibility: hidden;
           }
 
           .block-container {
-            padding-top: 1.4rem;
+            padding-top: 1rem;
             padding-bottom: 2rem;
           }
 
@@ -126,14 +137,14 @@ def render_styles():
             padding: 1rem 1.1rem;
             border-radius: 20px;
             background: rgba(255, 255, 255, 0.68);
-            border: 1px solid rgba(155, 107, 255, 0.14);
+            border: 1px solid rgba(55, 108, 176, 0.14);
             min-height: 116px;
           }
 
           .mini-card strong {
             display: block;
             margin-bottom: 0.35rem;
-            color: #6f36d8;
+            color: var(--navy-blue);
           }
 
           .top-nav-note {
@@ -143,6 +154,40 @@ def render_styles():
             text-transform: uppercase;
             letter-spacing: 0.14em;
           }
+
+          div.stButton > button {
+            border-radius: 999px;
+            border: 1px solid rgba(96, 118, 143, 0.22);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(219, 228, 238, 0.94) 100%);
+            color: #24384d;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            min-height: 2.9rem;
+            padding: 0.5rem 1.15rem;
+            box-shadow:
+              inset 0 1px 0 rgba(255, 255, 255, 0.85),
+              0 10px 24px rgba(110, 120, 134, 0.14);
+            transition: all 0.18s ease;
+          }
+
+          div.stButton > button:hover {
+            border-color: rgba(79, 108, 141, 0.34);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(210, 221, 234, 0.95) 100%);
+            color: #1b2f44;
+            transform: translateY(-1px);
+            box-shadow:
+              inset 0 1px 0 rgba(255, 255, 255, 0.9),
+              0 14px 28px rgba(84, 109, 138, 0.18);
+          }
+
+          div.stButton > button[kind="primary"] {
+            background: linear-gradient(180deg, #f7fbff 0%, #cfdbea 100%);
+            color: #15314f;
+            border-color: rgba(63, 98, 138, 0.30);
+            box-shadow:
+              inset 0 1px 0 rgba(255, 255, 255, 0.95),
+              0 12px 28px rgba(65, 102, 145, 0.18);
+          }
         </style>
         """,
         unsafe_allow_html=True,
@@ -150,39 +195,41 @@ def render_styles():
 
 
 def render_top_menu():
-    st.markdown('<div class="top-nav-note">Menu</div>', unsafe_allow_html=True)
-    selected = st.radio(
-        "Menu",
-        PAGES,
-        index=PAGES.index(st.session_state.current_page),
-        horizontal=True,
-        label_visibility="collapsed",
-    )
-    if selected != st.session_state.current_page:
-        st.session_state.current_page = selected
-        st.rerun()
+    cols = st.columns(len(PAGES))
+
+    for i, page in enumerate(PAGES):
+        if cols[i].button(page):
+            st.session_state.current_page = page
+            st.rerun()
 
 
 def render_home_page():
-    st.markdown(
-        """
-        <div class="hero">
-          <h1 class="hero-title">StegoShield</h1>
-          <p class="hero-text">
-            A professional image steganography project that encrypts secret messages with AES before
-            hiding them inside PNG images using Least Significant Bit embedding. The platform also tracks
-            wrong password attempts, stores activity logs, compares original and stego images, and
-            evaluates image quality using MSE and PSNR.
-          </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    hero_left, hero_right = st.columns([1.1, 0.4], vertical_alignment="center")
+    with hero_left:
+        st.markdown(
+            """
+            <div class="hero">
+              <h1 class="hero-title">StegoShield🛡️</h1>
+              <p class="hero-text">
+                A professional image steganography project that encrypts secret messages with AES before
+                hiding them inside PNG images using Least Significant Bit embedding. The platform also tracks
+                wrong password attempts, stores activity logs, compares original and stego images, and
+                evaluates image quality using MSE and PSNR.
+              </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with hero_right:
+        if LOGO_PATH.exists():
+            st.image(str(LOGO_PATH), use_container_width=True)
+        else:
+            st.info("Put `stegoshield.png` in the project folder to show the logo.")
 
     st.write("")
     card1, card2, card3 = st.columns(3)
     card1.markdown(
-        '<div class="mini-card"><strong>Project Title</strong>StegoShield: AES + LSB Image Steganography</div>',
+        '<div class="mini-card"><strong>About</strong>StegoShield: AES + LSB Image Steganography</div>',
         unsafe_allow_html=True,
     )
     card2.markdown(
