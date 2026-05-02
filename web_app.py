@@ -123,11 +123,11 @@ class StegoWebHandler(BaseHTTPRequestHandler):
         original = image.copy()
 
         start_time = time.perf_counter()
-        stego = test.hide_message(image.copy(), message, key)
+        stego = main.hide_message(image.copy(), message, key)
         processing_time = time.perf_counter() - start_time
 
-        mse = test.calculate_mse(original, stego)
-        psnr = test.calculate_psnr(original, stego)
+        mse = main.calculate_mse(original, stego)
+        psnr = main.calculate_psnr(original, stego)
 
         ok, encoded_png = cv2.imencode(".png", stego)
         if not ok:
@@ -156,7 +156,7 @@ class StegoWebHandler(BaseHTTPRequestHandler):
         image = decode_uploaded_png(fields["image"])
 
         start_time = time.perf_counter()
-        decoded_message = test.decode_message(image, key)
+        decoded_message = main.decode_message(image, key)
         processing_time = time.perf_counter() - start_time
 
         payload = {

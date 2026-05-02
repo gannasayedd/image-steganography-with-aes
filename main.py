@@ -1,14 +1,16 @@
-from matplotlib.image import imread 
-import matplotlib.pyplot as plt
-# %matplotlib inline
-import matplotlib.image as mpimg
-from PIL import Image
-import numpy as np
+from Crypto.Cipher import AES
+import base64
 import cv2
-import types
-import os
-os.chdir(r"C:\Users\gogos\OneDrive\سطح المكتب\python")
+import numpy as np
+from pathlib import Path
+import time
 
+
+END_MARKER = "#####"
+
+# ===============================
+# TEXT/BINARY
+# ===============================
 
 def message_to_binary(message):
     if type(message) == str:
@@ -19,113 +21,218 @@ def message_to_binary(message):
         return format(message, '08b')
     else:
         raise TypeError("Input type not supported")
-# ________________________________________________________________________________________________________________________________
 
-def hide_message(image , secret_message):  
-    # Calculate the maximum bytes to encode
+# ===============================
+# AES Encryption
+# ===============================
+
+def encrypt_message(secret_message, key):
+    if not key:
+        raise ValueError("Error: Encryption key cannot be empty.")
+
+    aes_key = key.ljust(32)[:32].encode("utf-8")
+    cipher = AES.new(aes_key, AES.MODE_EAX)
+    ciphertext, tag = cipher.encrypt_and_digest(secret_message.encode("utf-8"))
+    encrypted_data = cipher.nonce + tag + ciphertext
+    return base64.b64encode(encrypted_data).decode("utf-8")
+
+# ===============================
+# AES Decryption
+# ===============================
+
+def decrypt_message(encrypted_message, key):
+    if not key:
+        raise ValueError("Error: Decryption key cannot be empty.")
+
+    aes_key = key.ljust(32)[:32].encode("utf-8")
+
+    try:
+        encrypted_data = base64.b64decode(encrypted_message.encode("utf-8"), validate=True)
+        nonce = encrypted_data[:16]
+        tag = encrypted_data[16:32]
+        ciphertext = encrypted_data[32:]
+
+        if len(nonce) != 16 or len(tag) != 16 or len(ciphertext) == 0:
+            raise ValueError
+
+        cipher = AES.new(aes_key, AES.MODE_EAX, nonce=nonce)
+        decrypted_data = cipher.decrypt_and_verify(ciphertext, tag)
+        return decrypted_data.decode("utf-8")
+    except Exception:
+        return "Decryption failed (wrong key or corrupted data)"
+
+# ===============================
+# LSB EMBEDDING
+# ===============================
+
+def hide_message(image, secret_message, key):
+    encrypted = encrypt_message(secret_message, key) + END_MARKER
+
     n_bytes = image.shape[0] * image.shape[1] * 3 // 8
     print("Maximum bytes to encode:", n_bytes)
-    if len(secret_message) > n_bytes:
+    if len(encrypted) > n_bytes:
         raise ValueError("Error: Insufficient bytes, need bigger image or less data.")
-    
-    secret_message += "====="  # Delimiter to indicate end of message
-    binary_secret_msg = message_to_binary(secret_message)
 
+    binary_secret_msg = message_to_binary(encrypted)
     data_index = 0
 
     for values in image:
         for pixel in values:
             r, g, b = message_to_binary(pixel)
 
-            # Modify Red channel LSB
             if data_index < len(binary_secret_msg):
                 pixel[0] = int(r[:-1] + binary_secret_msg[data_index], 2)
                 data_index += 1
 
-            # Modify Green channel LSB
             if data_index < len(binary_secret_msg):
                 pixel[1] = int(g[:-1] + binary_secret_msg[data_index], 2)
                 data_index += 1
-            
-            # Modify Blue channel LSB
+
             if data_index < len(binary_secret_msg):
                 pixel[2] = int(b[:-1] + binary_secret_msg[data_index], 2)
                 data_index += 1
-            
+
             if data_index >= len(binary_secret_msg):
-                break
+                return image
 
     return image
 
-# ________________________________________________________________________________________________________________________________
+# ===============================
+# EXTRACTION
+# ===============================
+
 def binary_to_message(binary_data):
-    all_bytes = [binary_data[i: i+8] for i in range(0, len(binary_data), 8)]
+    all_bytes = [binary_data[i:i + 8] for i in range(0, len(binary_data), 8)]
     decoded_message = ""
+
     for byte in all_bytes:
         decoded_message += chr(int(byte, 2))
-        if decoded_message[-5:] == "=====":  # Check for the delimiter
-            break
-    return decoded_message[:-5]  # Remove the delimiter from the final message
+        if decoded_message.endswith(END_MARKER):
+            return decoded_message[:-len(END_MARKER)]
 
-# ________________________________________________________________________________________________________________________________
-def decode_message(image):
+    raise ValueError("Error: No hidden message found in the image.")
+
+
+def decode_message(image, key):
     binary_data = ""
+
     for values in image:
         for pixel in values:
             r, g, b = message_to_binary(pixel)
-            binary_data += r[-1]  # Extract LSB of Red channel
-            binary_data += g[-1]  # Extract LSB of Green channel
-            binary_data += b[-1]  # Extract LSB of Blue channel
+            binary_data += r[-1]
+            binary_data += g[-1]
+            binary_data += b[-1]
 
-    decoded_message = binary_to_message(binary_data)
-    return decoded_message
+    encoded_message = binary_to_message(binary_data)
+    return decrypt_message(encoded_message, key)
 
-# ________________________________________________________________________________________________________________________________
 
-# def encode_text_in_image(image_path, secret_message, output_path):
-#     image = cv2.imread(image_path)
-#     modified_image = hide_message(image, secret_message)
-#     cv2.imwrite(output_path, modified_image)
+# ===============================
+# EVALUATION METRICS
+# ===============================
 
+def validate_png_output(filename):
+    if Path(filename).suffix.lower() != ".png":
+        raise ValueError("Error: Output file must use the .png extension.")
+
+
+def calculate_mse(original_image, stego_image):
+    difference = original_image.astype("float64") - stego_image.astype("float64")
+    return np.mean(difference ** 2)
+
+
+def calculate_psnr(original_image, stego_image):
+    mse = calculate_mse(original_image, stego_image)
+    if mse == 0:
+        return float("inf")
+    max_pixel = 255.0
+    return 10 * np.log10((max_pixel ** 2) / mse)
+
+
+def print_evaluation_metrics(original_image, stego_image, processing_time):
+    mse = calculate_mse(original_image, stego_image)
+    psnr = calculate_psnr(original_image, stego_image)
+
+    print("\nEvaluation Metrics")
+    print("MSE:", mse)
+    if psnr == float("inf"):
+        print("PSNR: Infinity dB")
+    else:
+        print("PSNR:", psnr, "dB")
+    print("Processing time:", processing_time, "seconds")
+
+# ===============================
+# ENCODING INTERFACE
+# ===============================
 
 def encode_data():
-    image_path = input("Enter the path of the image: ")
+    image_path = input("Enter the path of the image: ").strip()
     image = cv2.imread(image_path)
+    if image is None:
+        raise FileNotFoundError("Error: Could not open image.")
 
-    #deatils of the image
     print("Image shape:", image.shape)
-    print("ORIGINAL IMAGE:")
-    resized_image = cv2.resize(image, (400, 400))
-    cv2.imshow("Original Image", resized_image)
 
-    data = input("Enter the secret message to hide: ")
-    if (len(data) == 0):
+    data = input("Enter the secret message to hide: ").strip()
+    if len(data) == 0:
         raise ValueError("Error: Secret message cannot be empty.")
-        
-    
-    filename = input("Enter the output filename (with extension, e.g., output.png): ")
-    encode_image = hide_message(image, data)
-    cv2.imwrite(filename, encode_image)
-# ________________________________________________________________________________________________________________________________
+
+    filename = input("Enter the output filename (with extension, e.g., output.png): ").strip()
+    validate_png_output(filename)
+
+    key = input("Enter the encryption key: ").strip()
+    if len(key) == 0:
+        raise ValueError("Error: Encryption key cannot be empty.")
+
+    original_image = image.copy()
+    start_time = time.perf_counter()
+    encoded_image = hide_message(image, data, key)
+    end_time = time.perf_counter()
+
+    cv2.imwrite(filename, encoded_image)
+    print("Message encrypted and hidden successfully in:", filename)
+    print_evaluation_metrics(original_image, encoded_image, end_time - start_time)
+
+# ===============================
+# DECODING INTERFACE
+# ===============================
 def decode_data():
-    image_path = input("Enter the path of the image to decode: ")
+    image_path = input("Enter the path of the image to decode: ").strip()
     image = cv2.imread(image_path)
-    decoded_message = decode_message(image)
-    print("Decoded message:", decoded_message)        
+    if image is None:
+        raise FileNotFoundError("Error: Could not open image.")
 
-# ________________________________________________________________________________________________________________________________  
+    key = input("Enter the decryption key: ").strip()
 
-# Image Steganography
+    start_time = time.perf_counter()
+    decoded_message = decode_message(image, key)
+    end_time = time.perf_counter()
 
-def Steganography():
-    a = input("Image Steganography \n 1. Encode the data \n 2. Decode the data \n Your input is: ")
-    userinput = int(a)
-    if (userinput == 1):
+    print("Decoded message:", decoded_message)
+    print("Processing time:", end_time - start_time, "seconds")
+    return decoded_message
+
+
+def steganography():
+    userinput = input(
+        "Image Steganography\n"
+        "1. Encode the data\n"
+        "2. Decode the data\n"
+        "Your input is: "
+    ).strip()
+
+    if userinput == "1":
         print("\nEncoding....")
         encode_data()
-    elif (userinput == 2):  
+    elif userinput == "2":
         print("\nDecoding....")
-        print("Decoded message is:", decode_data())
+        decode_data()
     else:
-        raise Exception("Enter correct input")
-Steganography() #encode image
+        raise ValueError("Enter correct input")
+
+
+if __name__ == "__main__":
+    try:
+        steganography()
+    except Exception as error:
+        print(error)
