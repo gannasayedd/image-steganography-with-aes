@@ -8,7 +8,6 @@ import time
 
 END_MARKER = "#####"
 
-# add comment line
 # ===============================
 # TEXT/BINARY
 # ===============================
