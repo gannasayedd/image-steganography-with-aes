@@ -5,7 +5,7 @@ import streamlit as st
 import time
 from pathlib import Path
 
-import main
+import test
 
 
 PAGES = ["Home", "Encode", "Decode", "Activity Logs", "Metrics Dashboard"]
@@ -428,7 +428,7 @@ def render_metrics_dashboard():
     st.line_chart(chart_df[["Processing Time"]], use_container_width=True)
 
 
-def test():
+def main():
     init_session_state()
     render_styles()
     render_top_menu()
@@ -447,4 +447,4 @@ def test():
 
 
 if __name__ == "__main__":
-    test()
+    main()
