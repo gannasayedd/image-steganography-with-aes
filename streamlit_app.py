@@ -1,9 +1,10 @@
+import time
+from pathlib import Path
+
 import cv2
 import numpy as np
 import pandas as pd
 import streamlit as st
-import time
-from pathlib import Path
 
 import test
 
@@ -147,6 +148,16 @@ def render_styles():
             color: var(--navy-blue);
           }
 
+          .nav-shell {
+            padding: 0.95rem 1.1rem 0.8rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.62);
+            border: 1px solid rgba(55, 108, 176, 0.14);
+            box-shadow: 0 18px 44px rgba(37, 86, 148, 0.10);
+            backdrop-filter: blur(10px);
+            margin-bottom: 0.9rem;
+          }
+
           .top-nav-note {
             color: var(--muted);
             font-size: 0.9rem;
@@ -198,7 +209,8 @@ def render_top_menu():
     cols = st.columns(len(PAGES))
 
     for i, page in enumerate(PAGES):
-        if cols[i].button(page):
+        button_type = "primary" if st.session_state.current_page == page else "secondary"
+        if cols[i].button(page, key=f"nav_{page}", type=button_type, use_container_width=True):
             st.session_state.current_page = page
             st.rerun()
 
@@ -229,7 +241,7 @@ def render_home_page():
     st.write("")
     card1, card2, card3 = st.columns(3)
     card1.markdown(
-        '<div class="mini-card"><strong>About</strong>StegoShield: AES + LSB Image Steganography</div>',
+        '<div class="mini-card"><strong>About</strong>StegoShield🛡️: AES + LSB Image Steganography</div>',
         unsafe_allow_html=True,
     )
     card2.markdown(
@@ -243,10 +255,10 @@ def render_home_page():
 
     st.write("")
     col1, col2 = st.columns(2)
-    if col1.button("Encode", use_container_width=True, type="primary"):
+    if col1.button("Encode", key="home_encode", use_container_width=True, type="primary"):
         st.session_state.current_page = "Encode"
         st.rerun()
-    if col2.button("Decode", use_container_width=True):
+    if col2.button("Decode", key="home_decode", use_container_width=True):
         st.session_state.current_page = "Decode"
         st.rerun()
 
@@ -254,8 +266,8 @@ def render_home_page():
     st.markdown(
         """
         <div class="glass-card">
-          <strong style="color:#6f36d8;">Project Overview</strong>
-          <p style="margin:0.7rem 0 0;color:#7a4ea0;line-height:1.75;">
+          <strong style="color:#163d6b;">Project Overview</strong>
+          <p style="margin:0.7rem 0 0;color:#4a6d95;line-height:1.75;">
             Use the Encode page to protect and hide a message. Use the Decode page to recover it.
             The Activity Logs page records important events, and the Metrics Dashboard visualizes
             PSNR, MSE, and processing time from your encoding runs.
@@ -281,7 +293,7 @@ def render_encode_page():
             height=180,
         )
         encode_key = st.text_input("Encryption key", type="password", key="encode_key")
-        encode_clicked = st.button("Encrypt and Hide", type="primary", use_container_width=True)
+        encode_clicked = st.button("Encrypt and Hide", key="encode_submit", type="primary", use_container_width=True)
 
     with right:
         st.subheader("Cover Image Preview")
@@ -355,7 +367,7 @@ def render_decode_page():
     with left:
         decode_file = st.file_uploader("Upload a PNG stego image", type=["png"], key="decode_file")
         decode_key = st.text_input("Decryption key", type="password", key="decode_key")
-        decode_clicked = st.button("Extract and Decrypt", type="primary", use_container_width=True)
+        decode_clicked = st.button("Extract and Decrypt", key="decode_submit", type="primary", use_container_width=True)
 
     with right:
         st.subheader("Stego Image Preview")
