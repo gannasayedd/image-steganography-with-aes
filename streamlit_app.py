@@ -89,9 +89,9 @@ def render_styles():
 
           .stApp {
             background:
-              radial-gradient(circle at top left, rgba(117, 199, 255, 0.30), transparent 27%),
-              radial-gradient(circle at top right, rgba(22, 61, 107, 0.20), transparent 30%),
-              linear-gradient(135deg, var(--baby-blue) 0%, #f8fcff 38%, var(--sky-blue) 70%);
+              radial-gradient(circle at top left, rgba(117, 199, 255, 0.30), transparent 30%),
+              radial-gradient(circle at top right, rgba(22, 61, 107, 0.20), transparent 50%),
+              linear-gradient(135deg, var(--baby-blue) 0%, #f8fcff 38%, var(--sky-blue) 50%);
           }
 
           header[data-testid="stHeader"],
