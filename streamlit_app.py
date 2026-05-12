@@ -12,6 +12,10 @@ import test
 PAGES = ["Home", "Encode", "Decode", "Activity Logs", "Metrics Dashboard"]
 LOGO_PATH = Path("stegoshield.png")
 
+# Change these two values only.
+APP_USERNAME = "admin"
+APP_PASSWORD = "#Aou12"
+
 
 st.set_page_config(
     page_title="StegoShield🛡️",
@@ -25,6 +29,8 @@ def init_session_state():
         "activity_logs": [],
         "wrong_password_attempts": 0,
         "metrics_history": [],
+        "authenticated": False,
+        "login_error": "",
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -199,20 +205,84 @@ def render_styles():
               inset 0 1px 0 rgba(255, 255, 255, 0.95),
               0 12px 28px rgba(65, 102, 145, 0.18);
           }
+
+          .login-card {
+            max-width: 460px;
+            margin: 7vh auto 0;
+            padding: 2rem;
+            border-radius: 26px;
+            background: rgba(255, 255, 255, 0.78);
+            border: 1px solid rgba(55, 108, 176, 0.18);
+            box-shadow: 0 24px 70px rgba(37, 86, 148, 0.15);
+            backdrop-filter: blur(12px);
+            text-align: center;
+          }
+
+          .login-title {
+            margin: 0;
+            color: var(--ink);
+            font-size: 2.4rem;
+            line-height: 1;
+          }
+
+          .login-subtitle {
+            margin-top: 0.7rem;
+            color: var(--muted);
+            line-height: 1.7;
+            
+          }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
 
+
+def render_login_page():
+    st.markdown(
+        """
+        <div class="login-card">
+          <h1 class="login-title">StegoShield🛡️</h1>
+          <p class="login-subtitle">
+            Login first to access the image steganography system.
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    with st.form("login_form", clear_on_submit=False):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        login_clicked = st.form_submit_button("Login", use_container_width=True, type="primary")
+
+    if login_clicked:
+        if username == APP_USERNAME and password == APP_PASSWORD:
+            st.session_state.authenticated = True
+            st.session_state.login_error = ""
+            add_log("Login", "Success", "User logged in successfully.")
+            st.rerun()
+        else:
+            st.session_state.login_error = "Invalid username or password."
+            add_log("Login", "Failed", "Invalid login attempt.")
+
+    if st.session_state.login_error:
+        st.error(st.session_state.login_error)
+
 def render_top_menu():
-    cols = st.columns(len(PAGES))
+    cols = st.columns(len(PAGES) + 1)
 
     for i, page in enumerate(PAGES):
         button_type = "primary" if st.session_state.current_page == page else "secondary"
         if cols[i].button(page, key=f"nav_{page}", type=button_type, use_container_width=True):
             st.session_state.current_page = page
             st.rerun()
+
+    if cols[-1].button("Logout", key="logout", use_container_width=True):
+        st.session_state.authenticated = False
+        st.session_state.current_page = "Home"
+        add_log("Logout", "Success", "User logged out successfully.")
+        st.rerun()
 
 
 def render_home_page():
@@ -443,6 +513,11 @@ def render_metrics_dashboard():
 def main():
     init_session_state()
     render_styles()
+
+    if not st.session_state.authenticated:
+        render_login_page()
+        return
+
     render_top_menu()
     st.write("")
 
